@@ -1,13 +1,17 @@
 # TerraClass — Offline Satellite Tile Classifier
 
-A small, offline service that classifies satellite tiles by land-use type
-(Forest, River, Residential, Industrial, AnnualCrop, SeaLake, Highway) using
-a locally-run MobileNetV3-Small model, stores results in SQLite, and exposes
-them for querying via a FastAPI endpoint.
+A small, offline service that classifies satellite tiles by land-use type (Forest, River, Residential, Industrial, AnnualCrop, SeaLake, Highway) using
+a locally-run MobileNetV3-Small model, stores results in SQLite, and exposes them for querying via a FastAPI endpoint.
 
 Built for the GalaxEye Backend Engineer, ML Systems take-home assignment.
-See `DESIGN.md` for the full design rationale and trade-offs, and
-`PART3.md` for the written reasoning answers.
+
+
+
+## Submission documents
+
+- Design note (Part 1): `Part1_Design_Note.txt`
+- Working slice (Part 2): this repository — see "Running the service" and "API" sections below
+- Problem-solving answers (Part 3): `Part3_Problem_Solving.txt`
 
 
 ## 1. Architecture
@@ -49,7 +53,6 @@ pip install -r requirements.txt
 
 
 ## 3. Dataset
-
 Place the dataset under `data/`:
 
 
@@ -70,7 +73,7 @@ Once running:
 
 ## 5. API
 
-### `POST /predict`
+### `POST /predict` (THIS IS THE MAIN ENDPOINT ASKED IN REQUIREMENT)
 
 Upload a tile image, get back a classification, and have it stored.
 
@@ -189,7 +192,8 @@ SELECT * FROM predictions ORDER BY id DESC LIMIT 10;
 (free): open the app → File → Open Database → select
 `storage/terraclass.db` → "Browse Data" tab → `predictions` table.
 
-
+Note: `storage/terraclass.db` is committed with a small number of real predictions from local testing, left in intentionally as evidence the
+service was actually run end-to-end, not just written and never executed.
 
 
 ## 10. Screenshots & Evidence

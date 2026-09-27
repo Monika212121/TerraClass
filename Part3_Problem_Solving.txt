@@ -1,0 +1,63 @@
+TerraClass - Part 3: Problem-Solving
+Backend Engineer, ML Systems - Take Home Assignment
+
+
+
+Q1. Your classifier turns out to be wrong about 30% of the time. What do you do, and how would you even decide whether it's "good enough" to be useful at all?
+
+A1. My first instinct would NOT be to just go retrain the model for more accuracy. Before doing anything, I'd want to know what kind of wrong it actually is. A flat 30% error number doesn't tell you much on its own - is it spread evenly across all 7 classes, or is it mostly coming from 1-2 pairs the model keeps mixing up?
+
+I actually saw a small version of this myself. My overall eval accuracy came out to 88% (so about 12% error), which sounded fine on the surface, but when I looked at the per-class numbers, Highway had precision of only 0.735 and River had recall of only 0.767. That basically told me the model keeps confusing River and Highway tiles with each other, probably because both are long thin shapes in the image (a river bending through land looks structurally similar to a road/highway at low resolution). Meanwhile a class like AnnualCrop was above 0.93 precision, no real issue there. So the same overall number (88%) meant very different things depending on which class you looked at, and I'd expect the same to be true at 30% error, just worse.
+
+Once I know which classes/situations the errors cluster around, "good enough" stops being a single number and becomes a question of what happens after the prediction:
+
+- If there's a human reviewing the results anyway, then honestly accuracy matters less than whether the model tells you when it's unsure. A 70% model that's honest about its confidence can be more useful than an 85% model that's confidently wrong.
+- If nothing downstream double-checks the prediction, then which classes get mixed up matters a lot. Confusing Forest with SeaLake is probably harmless. Confusing something operationally important with something else is not.
+- Practically, I'd look at confidence vs correctness together - basically check: when the model says it's 90%+ sure, is it actually right almost every time? If yes, you can trust the confident predictions and only manually check the unsure ones. That's a much more useful way to decide "is this good enough" than staring at one accuracy percentage.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Q2. This service runs offline, with no one watching it live. A month after deployment, how would you know it's still working correctly?
+
+A2. Honestly this one made me think the most, because "nobody is watching" means the system has to leave its own evidence behind, otherwise you'd genuinely have no way to know until something obviously breaks.
+
+A few things I'd lean on:
+
+Every prediction already gets stored with the full probability distribution across all 7 classes, not just the winning label, plus the model version. So even without checking anything live, you could go back a month later and look at whether the shape of that confidence data changed over time - like, is the average confidence dropping compared to when it was first deployed? Are more tiles suddenly falling into "low confidence" than before? That alone is a signal something in the incoming tiles changed, even with zero ground truth to compare against.
+
+I'd also want a small fixed set of tiles with known correct answers packaged along with the deployment, and run that same fixed set through the model every so often (could even be manual, doesn't need to be automated on isolated hardware) - if accuracy on that known set drops, something broke in the pipeline itself, separate from whatever new tiles are actually coming in day to day.
+
+And just basic boring stuff - did the process crash and restart on its own, are prediction times staying roughly the same or did they suddenly spike (which could mean a corrupted model got reloaded, or something's chewing up resources), is the disk filling up. None of this needs a fancy dashboard, it just needs to be logged somewhere so someone can check it eventually.
+
+This one is actually connected to something I built for a real reason, not just theory - I added a check at startup that doesn't just check if model.pt exists, it actually tries to load it and confirms it's not corrupted. I did this because I realized: if training gets interrupted halfway (laptop sleeps, process gets killed, whatever), you could end up with a broken model file sitting there that LOOKS like it's present, but would actually fail or give garbage predictions. On something that runs unmonitored for a month, that's exactly the kind of failure that would go unnoticed the longest, so I wanted it caught immediately at restart instead.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Q3. Tiles are coming in fine, but the stored results look wrong. Walk us through how you'd find the cause - your actual steps, in order.
+
+A3. I'm not making this one up, I genuinely hit this a few times while building this, so this is basically just what I actually did each time:
+
+1. First I'd reproduce it with a tile I already know the correct answer for (I used my own labelled sample tiles for this), and hit the actual running endpoint with it, not just test the model separately.
+
+2. Before touching the database at all, I'd check: is the API's own response wrong, or is the response correct but what got saved doesn't match it? This one question tells you immediately whether the bug is in the model/inference side or the saving side, so you're not wasting time looking in the wrong place.
+
+3. If the API response itself is wrong - I'd check image decoding first. I actually hit this: I sent a corrupted image on purpose to test error handling, and it wasn't getting caught properly at first, it was throwing a raw error instead of a clean message. After that I'd check preprocessing matches training exactly (resize, normalization) - if this is even slightly off, you get predictions that still look confident but are just wrong, with no error at all, which is the scary kind of bug. Then I'd check that the class-to-label mapping being used matches the one saved during training - a model can load perfectly fine and still point at the wrong label if this index mapping is off.
+
+4. If the API response is correct but what's stored is wrong, I'd check the save/write code directly. I hit a genuinely funny one here - I had a typo where a parameter was literally named nmodel_version instead of model_version (extra "n" I didn't notice while typing), and that one at least failed loudly and immediately with a clear Python error, which honestly made it easy to catch. A worse one I hit was a variable name mismatch - somewhere I'd written _classification_service (with an underscore) but the actual variable defined was classification_service without one. That one didn't show up until I actually called that specific route, so it sat there quietly until the exact code path got triggered - a good reminder that just because /predict works doesn't mean every other endpoint in the file is fine.
+
+5. Then I'd query the database directly with a plain script, skipping the API completely, just to rule out a bug in how results get read back and formatted for the response. This is actually why I added a proper round-trip test - hit the predict endpoint, then immediately check the same result shows up correctly through the query endpoint, so I'm not just trusting each side separately.
+
+6. Last thing I'd check is whether I'm even looking at the environment correctly - wrong folder, database path pointing somewhere I didn't expect, an old leftover database file from before I moved things around. I actually ran into this myself - I was checking an empty .db file thinking nothing was being saved, when really my actual database with all my real data was sitting correctly filled in a completely different folder because I'd changed the path earlier and forgot to check the new one.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Q4. What's the weakest part of your design, and what would break it first?
+
+A4. Two things come to mind, and both are decisions I made on purpose, not things I just didn't get to.
+
+First - the auto-train-if-model-missing behavior on startup. Right now if the trained model files aren't there, the service just starts training on its own. On real isolated hardware, if the training images aren't present, or there isn't enough time/memory to actually finish training, this would just silently hang or fail in a confusing way instead of giving a clear "model files missing" error right away. I did add protection so an interrupted training run can't leave a broken half-written file behind (train to a temp folder first, only move it into place once it's fully done), but the bigger question of whether a service should ever try to fix itself like this automatically vs just refusing to start with a clear message - that's still the part I'd flag as the weakest, most debatable choice in this whole design.
+
+Second, smaller one - the query endpoint (GET /predictions) doesn't support any filtering yet, it just returns everything up to a limit. Fine right now with a handful of rows, but the moment there are a lot of stored predictions, an analyst won't be able to actually find what they want without scrolling through everything. The database already has every column needed to support filtering by label or confidence, I just haven't built that part yet since it wasn't strictly required for this thin slice. This one's low risk though, it's cheap to add later without breaking anything that already works.

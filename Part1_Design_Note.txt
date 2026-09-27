@@ -1,0 +1,98 @@
+TerraClass - Design Note
+Backend Engineer, ML Systems - Take Home Assignment
+
+Why "TerraClass"?
+
+I named this project TerraClass since it's classifying terrain regions - felt more descriptive than a generic name.
+
+
+How I broke the problem down:
+
+When I first read the assignment, I split it into three clear parts:
+1. ML part - build an image classifier that can tell apart the different terrain labels provided (Forest, River, Residential, Industrial, AnnualCrop, SeaLake, Highway).
+2. Backend part - expose an endpoint where a user sends in a tile/terrain image and gets back the correct label.
+3. Database part - connect to the backend so every prediction gets stored locally, not just returned and forgotten.
+
+Once this was clear, I kept the three parts in separate folders in the repo: an ml/ folder for model config, training, and inference code, and an app/ folder for the FastAPI backend, with the database layer inside app/db/. Keeping these separate mattered to me because the ML code and backend code don't need to know much about each other - the backend just needs a predict() function it can call, it doesn't need to care how the model was trained.
+
+
+Model choice:
+
+I've built image classification projects before, so this part was familiar. The one real decision I had to make was which model to use. I wanted good accuracy, but I also knew this had to run on CPU, offline, and possibly process a lot of tiles - so a heavy model wasn't the right answer even if it was slightly more accurate.
+
+I compared three options:
+
+1. Small CNN, from scratch - Zero external dependency, cheapest to run, but a lower accuracy ceiling on ~1k training images with no pretrained visual priors to lean on.
+2. MobileNetV3-Small, ImageNet-pretrained, fine-tuned head - Purpose-built for constrained/CPU inference, best balance of cost vs. accuracy for this use case.
+3. ResNet18 / EfficientNet-B0, pretrained - Higher accuracy ceiling, but 2-4x heavier per-image inference cost for a small gain on a task where classes are already visually distinct.
+
+I used some AI-assisted comparison here to sanity-check my own reasoning (the brief explicitly says using AI tools well is fine), and MobileNetV3-Small came out as the best fit - low CPU cost relative to the others, without giving up much accuracy in exchange. This wasn't just a claim I took at face value - I experienced it directly after training and evaluating it.
+
+I fine-tuned only the classifier head (backbone frozen), and resized input tiles to 128x128 instead of the more common 224x224. Since the source tiles are natively only 64x64, upsampling all the way to 224 doesn't add real detail - it just costs more compute per image for no real benefit. Given the scenario is about processing potentially large volumes of tiles, that cost adds up, so I chose the smaller input size deliberately.
+
+I first did all my experimentation in a Google Colab notebook - trained the model, ran evaluation, checked predictions actually made sense - before writing any of the local backend code. Only once I trusted the model did I move to building the service around it.
+
+
+Result:
+Final accuracy on eval_set/ (210 held-out tiles, never touched during training or any other decision) was 88.1%. Per-class breakdown:
+
+AnnualCrop - precision 0.966, recall 0.933, f1 0.949
+Forest - precision 0.871, recall 0.900, f1 0.885
+Highway - precision 0.735, recall 0.833, f1 0.781
+Industrial - precision 0.853, recall 0.967, f1 0.906
+Residential - precision 0.962, recall 0.833, f1 0.893
+River - precision 0.885, recall 0.767, f1 0.821
+SeaLake - precision 0.933, recall 0.933, f1 0.933
+
+Highway's low precision alongside River's low recall points to a River-Highway confusion - both have long, linear features (a watercourse vs. a road strip) that are plausibly hard to tell apart at 128px for a lightweight model. Residential's recall dip suggests some secondary overlap with Industrial, likely because both are dense, built-up textures. I'm not just reporting the headline number here because these per-class weak spots are exactly what feed into the confidence-handling decision below, and into how I reasoned through Part 3.
+
+
+What I chose to store, and why:
+
+1. I decided early on that I wouldn't just return the predicted label - I wanted to also pass back and store the confidence score, the full softmax probability distribution across all classes, a timestamp, the inference time, and the model version. Each of these was a deliberate choice, not just "store everything":
+
+2. Confidence and the full softmax distribution matter because a wrong prediction isn't always a confident wrong prediction. If the model says wrong_label = 0.51 and right_label = 0.49, that's a completely different situation from the model being confidently wrong at 0.95. Storing only the top label throws this information away permanently - and the assignment itself specifically asks how to handle predictions the model isn't confident about, so I wanted the data to actually support answering that, not just talking about it. It's also what makes a result auditable after the fact: if someone asks six months later why a tile was classified as Residential, a bare label gives no way to answer that, but the full distribution does.
+
+3. Model version matters because if I retrain or swap the model later, I want to be able to compare predictions made by the old model against the new one on the same tiles, and know which one is actually better - not just assume the newer one is.
+
+4. Timestamp matters for debugging. If a batch of predictions during a certain time window turns out to be systematically wrong, the timestamp is what lets you go back and ask what was different about that batch - for example, if darker/nighttime imagery started coming in at some point and the model handles those worse, the timestamp is the thread you'd pull to notice that pattern at all.
+
+5. I used SQLite because it's a built-in Python module, needs no separate server or setup, and fits the "runs offline, no internet" requirement directly - there's nothing to install or configure, the file just exists on disk.
+
+
+Querying:
+
+The query side is implemented as a simple GET /predictions endpoint that returns stored results, most recent first, with a limit parameter. 
+I kept this deliberately simple - no filtering by label or confidence yet - because the schema already has every field needed to support that later, and 
+I didn't want to build query features nobody had asked for yet, in the spirit of keeping this a thin slice rather than a finished product. 
+If I extended it, the natural next step would be something like `GET /predictions?label= Forest&min_confidence=0.8`.
+
+
+What I left out, on purpose:
+I analyzed a confidence threshold for flagging low-confidence predictions as "needs review" - using the confidence and softmax data I was already storing - but didn't wire an actual threshold check into the API. 
+This was a deliberate call, not something I ran out of time for: I wanted to leave a concrete, well-understood next step available rather than pre-solve every possible follow-up before the interview, especially since the brief mentions a small live change might be asked of me during the walkthrough. I stick to the core requirement for Part2.
+
+
+Offline / reliability decisions worth calling out?
+
+1. The model is loaded once at service startup, not on every request - matters for both latency and predictable behavior on constrained hardware.
+
+2. On startup, the service checks that all required model artifact files exist, are non-empty, and that the model weights actually load correctly - not just that the file exists. 
+This came from a real concern: if a previous training run got interrupted midway, it could leave a corrupted or partial file behind that looks present but isn't actually usable.
+Training writes to a temporary location first and only moves files into place after it finishes successfully, so an interrupted run never leaves a broken file where the service expects a working one.
+
+3. Invalid uploads (wrong file type, corrupt image bytes, empty file) are caught and returned as clean 400 errors, not raw crashes.
+
+
+Assumptions I made:
+1. Single analyst, low concurrency - no auth or multi-user handling, since this reads like an isolated ground-station tool, not a public product.
+2. SQLite is enough at the scale implied here (hundreds to low thousands of tiles); I'd reconsider this before anything with real concurrent writes.
+3. "Querying" means retrieving and reviewing stored results, not complex analytics - an unfiltered list with a limit covers that core need.
+4. PNG/JPEG RGB tile inputs - no assumption made about multispectral imagery, since the provided dataset is RGB.
+
+
+Questions I'd ask GalaxEye:
+1. What's the expected tile volume in a real deployment - does an analyst review results one at a time, or would they want to pull results in bulk?
+2. If the model gets retrained later, would old tiles ever need to be re-run through the new version for comparison, or is each tile only ever classified once?
+3. Is the "isolated hardware" always a single machine, or could multiple ingestion points write to the same result store at once - this changes whether SQLite is still the right call.
+4. Is there a real cost difference between error types in practice (e.g. mistaking a river for a highway matters more operationally than mixing up forest and sea-lake), or is overall accuracy the only signal that matters here?

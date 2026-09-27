@@ -20,13 +20,13 @@ def set_classification_service(service):
     classification_service = service
 
 
-
+# I added this endpoint to return all the prediction records from the DB
 @router.get("/predictions")
 def get_predictions(limit: int = Query(default=100, ge=1, le=500)):
     return classification_service.list_predictions(limit=limit)
 
 
-
+# This is the main endpoint, in the requirement.
 @router.post("/predict")
 async def predict_tile(
     tile: UploadFile = File(...)

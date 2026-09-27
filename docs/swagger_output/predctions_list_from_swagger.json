@@ -1,0 +1,102 @@
+[
+  {
+    "prediction_id": 21,
+    "tile_name": "Industrial_54.png",
+    "tile_sha256": "615901527e2dd188d853a6604c3899b7f0f659c692b4ea5f41eecee6356f1d9f",
+    "predicted_label": "Industrial",
+    "confidence": 0.9991,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 17.390499997418374,
+    "created_at": "2026-09-27T09:05:00.258761+00:00"
+  },
+  {
+    "prediction_id": 20,
+    "tile_name": "Industrial_89.png",
+    "tile_sha256": "9aa6676cef7c345bc4761fccf6798ab57b52bf1698528427841a20eb0698d8ef",
+    "predicted_label": "Industrial",
+    "confidence": 0.9932,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 19.32669999951031,
+    "created_at": "2026-09-27T09:04:51.982754+00:00"
+  },
+  {
+    "prediction_id": 19,
+    "tile_name": "Industrial_123.png",
+    "tile_sha256": "a3dab3849dccc2c189d725dc5d6dcfddb0112a5d97a29c4344b9613883bba1a6",
+    "predicted_label": "Industrial",
+    "confidence": 1,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 27.04760000051465,
+    "created_at": "2026-09-27T09:04:44.329030+00:00"
+  },
+  {
+    "prediction_id": 18,
+    "tile_name": "Highway_28.png",
+    "tile_sha256": "91f151877d12a28e5557957403c97b421b6d4e143aacbdcfaec4853ac341b4eb",
+    "predicted_label": "Highway",
+    "confidence": 0.5265,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 17.67919999838341,
+    "created_at": "2026-09-27T09:02:27.681029+00:00"
+  },
+  {
+    "prediction_id": 17,
+    "tile_name": "Forest_111.png",
+    "tile_sha256": "9e4e6800d8980dfd7b1ed855a13614441b57c4671ba4de2a00503d3e7fdf78b1",
+    "predicted_label": "Forest",
+    "confidence": 0.6817,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 18.960199999128236,
+    "created_at": "2026-09-27T09:02:04.036884+00:00"
+  },
+  {
+    "prediction_id": 16,
+    "tile_name": "AnnualCrop_138.png",
+    "tile_sha256": "51529d79033cb6fdb79d864012ad0a104b54a09602c38d396e54e33821b7528b",
+    "predicted_label": "AnnualCrop",
+    "confidence": 0.8409,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 21.282800000335556,
+    "created_at": "2026-09-27T09:01:47.109393+00:00"
+  },
+  {
+    "prediction_id": 15,
+    "tile_name": "River_18.png",
+    "tile_sha256": "8528bf1cfef7957cf7eff3360390d8e74222169546eca75412007c9e7fa49219",
+    "predicted_label": "River",
+    "confidence": 0.9988,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 21.19440000024042,
+    "created_at": "2026-09-27T09:01:17.065209+00:00"
+  },
+  {
+    "prediction_id": 14,
+    "tile_name": "Residential_11.png",
+    "tile_sha256": "36d67d95fe53335a7d3b5f950e62556626d435c7ebb20f718a288b89179c8f06",
+    "predicted_label": "Residential",
+    "confidence": 0.9988,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 27.800699997897027,
+    "created_at": "2026-09-27T09:01:02.584861+00:00"
+  },
+  {
+    "prediction_id": 13,
+    "tile_name": "Residential_48.png",
+    "tile_sha256": "fe38ecf38df145dd813ee5013d99887f85ada926ee4408e01311774996165010",
+    "predicted_label": "Forest",
+    "confidence": 0.633,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 17.675800001597963,
+    "created_at": "2026-09-27T08:58:50.620311+00:00"
+  },
+  {
+    "prediction_id": 12,
+    "tile_name": "Forest_11.png",
+    "tile_sha256": "e70d8319b5279ffc72053adae82ae61e0f2efaa6af42ab7aea935d94ea853104",
+    "predicted_label": "SeaLake",
+    "confidence": 0.5012,
+    "model_version": "mobilenetv3-small-v1",
+    "inference_time_ms": 22.151599998323945,
+    "created_at": "2026-09-27T08:58:09.671657+00:00"
+  }
+]

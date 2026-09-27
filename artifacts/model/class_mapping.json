@@ -1,0 +1,20 @@
+{
+  "class_to_idx": {
+    "AnnualCrop": 0,
+    "Forest": 1,
+    "Highway": 2,
+    "Industrial": 3,
+    "Residential": 4,
+    "River": 5,
+    "SeaLake": 6
+  },
+  "idx_to_class": {
+    "0": "AnnualCrop",
+    "1": "Forest",
+    "2": "Highway",
+    "3": "Industrial",
+    "4": "Residential",
+    "5": "River",
+    "6": "SeaLake"
+  }
+}

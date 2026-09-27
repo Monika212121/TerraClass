@@ -1,0 +1,14 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.9, pytest-9.1.1, pluggy-1.6.0 -- C:\Program Files\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: D:\assignment\TerraClass
+plugins: anyio-4.11.0, dash-4.4.1
+collecting ... collected 5 items
+
+tests/test_api.py::test_predict_valid_tile_returns_prediction PASSED     [ 20%]
+tests/test_api.py::test_predict_rejects_non_image_file PASSED            [ 40%]
+tests/test_api.py::test_predict_rejects_corrupt_image_bytes PASSED       [ 60%]
+tests/test_api.py::test_predict_rejects_empty_file PASSED                [ 80%]
+tests/test_api.py::test_predictions_endpoint_reflects_stored_result PASSED [100%]
+
+============================== 5 passed in 7.27s ==============================

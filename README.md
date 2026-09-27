@@ -165,7 +165,7 @@ This is a thin slice per the assignment's instructions ("stub or skip the rest, 
 The SQLite file lives at `storage/terraclass.db`, created automatically on
 first run. Three ways to look at its contents:
 
-** Option A: Quick check via Python (no extra install needed):**
+**Option A: Quick check via Python (no extra install needed):**
 ```bash
 python -c "
 import sqlite3
@@ -176,7 +176,7 @@ for row in conn.execute('SELECT * FROM predictions ORDER BY id DESC LIMIT 10'):
 "
 ```
 
-** Option B: Via the `sqlite3` CLI**, if installed:
+**Option B: Via the `sqlite3` CLI**, if installed:
 ```bash
 sqlite3 storage/terraclass.db
 .headers on
@@ -185,7 +185,7 @@ SELECT * FROM predictions ORDER BY id DESC LIMIT 10;
 .quit
 ```
 
-** Option C: Via a GUI** — [DB Browser for SQLite](https://sqlitebrowser.org/dl/)
+**Option C: Via a GUI** — [DB Browser for SQLite](https://sqlitebrowser.org/dl/)
 (free): open the app → File → Open Database → select
 `storage/terraclass.db` → "Browse Data" tab → `predictions` table.
 
